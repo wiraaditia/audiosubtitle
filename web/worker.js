@@ -4,6 +4,21 @@ env.allowLocalModels = false;
 const cache = {};
 const post = (m) => self.postMessage(m);
 
+async function probe() {
+  const targets = {
+    "huggingface.co": "https://huggingface.co/Xenova/whisper-small/resolve/main/config.json",
+    "cdn.jsdelivr.net": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/package.json",
+  };
+  const res = await Promise.all(Object.entries(targets).map(async ([k, u]) => {
+    try {
+      const c = new AbortController(); const t = setTimeout(() => c.abort(), 8000);
+      const r = await fetch(u, { signal: c.signal }); clearTimeout(t);
+      return k + ": " + (r.ok ? "OK" : "HTTP " + r.status);
+    } catch (e) { return k + ": GAGAL"; }
+  }));
+  return res.join(", ");
+}
+
 function getPipe(model) {
   return (cache[model] ||= pipeline("automatic-speech-recognition", "Xenova/whisper-" + model, {
     device: "wasm", dtype: "q8", progress_callback: (p) => post({ type: "download", p }),
@@ -16,7 +31,7 @@ self.onmessage = async (e) => {
     post({ type: "status", key: "loading" });
     let tr;
     try { tr = await getPipe(model); }
-    catch (err) { throw new Error("Gagal mengunduh model dari huggingface.co / cdn.jsdelivr.net (" + (err && err.message ? err.message : err) + ")"); }
+    catch (err) { throw new Error("Gagal mengunduh model (" + (err && err.message ? err.message : err) + "). Cek koneksi → " + await probe()); }
     post({ type: "status", key: "transcribing" });
     const total = Math.max(1, Math.ceil(duration / 20));
     let done = 0;

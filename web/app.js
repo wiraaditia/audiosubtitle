@@ -41,7 +41,7 @@ function setStatus(key, cls = "", extra = "") {
   statusKey = { key, cls, extra };
   const el = $("status");
   el.className = cls;
-  el.textContent = t("s_" + key) + extra;
+  el.textContent = (T[ui]["s_" + key] || T.id["s_" + key] || "") + extra;
 }
 function setBar(v) { $("bar").style.width = Math.round(v * 100) + "%"; }
 $("ui").onchange = (e) => { ui = e.target.value; localStorage.setItem("ui", ui); applyUi(); };

@@ -44,7 +44,7 @@ self.onmessage = async (e) => {
     let tr;
     try { tr = await getPipe(model); }
     catch (err) { throw new Error("Gagal mengunduh model (" + (err && err.message ? err.message : err) + "). File terakhir: " + lastFile + ". Cek koneksi → " + await probe()); }
-    post({ type: "status", key: "transcribing" });
+    post({ type: "status", key: "tr" });
     const total = Math.max(1, Math.ceil(duration / 20));
     let done = 0;
     const opts = {

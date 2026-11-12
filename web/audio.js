@@ -1,7 +1,10 @@
 import { parseWav } from "./wav.js";
 
 // ffmpeg.wasm core (~32 MB) hanya diunduh bila format tidak bisa dibaca browser (mis. AMR).
-export const FFMPEG_BASE = () => globalThis.FFMPEG_CORE_BASE || "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd";
+const CORE = "@ffmpeg/core@0.12.10/dist/umd";
+export const FFMPEG_BASES = () => globalThis.FFMPEG_CORE_BASE
+  ? [globalThis.FFMPEG_CORE_BASE]
+  : [location.origin + "/unpkg/" + CORE, "https://unpkg.com/" + CORE];
 
 async function resample16k(buf) {
   const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16000)), 16000);
@@ -11,7 +14,15 @@ async function resample16k(buf) {
   return { audio: r.getChannelData(0), duration: buf.duration };
 }
 
-function viaFfmpeg(arr, ext) {
+async function viaFfmpeg(arr, ext) {
+  let lastErr;
+  for (const base of FFMPEG_BASES()) {
+    try { return await runFfmpeg(arr.slice(0), ext, base); } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+function runFfmpeg(arr, ext, base) {
   return new Promise((resolve, reject) => {
     const w = new Worker("ffdecode.js");
     w.onmessage = (e) => {
@@ -19,7 +30,7 @@ function viaFfmpeg(arr, ext) {
       e.data.ok ? resolve({ audio: e.data.audio, duration: e.data.audio.length / 16000 }) : reject(new Error("Gagal mengonversi audio / mengunduh konverter dari unpkg.com (" + e.data.error + ")"));
     };
     w.onerror = (e) => { w.terminate(); reject(new Error(e.message || "ffmpeg worker error")); };
-    w.postMessage({ data: arr, ext, base: FFMPEG_BASE() }, [arr]);
+    w.postMessage({ data: arr, ext, base }, [arr]);
   });
 }
 

@@ -21,7 +21,17 @@ async function probe() {
 }
 
 let lastFile = "-";
-function getPipe(model) {
+async function getPipe(model) {
+  // 1) lewat server situs sendiri (/hf/ -> huggingface.co), 2) langsung ke huggingface.co
+  const hosts = [self.location.origin + "/hf/", "https://huggingface.co/"];
+  let lastErr;
+  for (const h of hosts) {
+    env.remoteHost = h;
+    try { return await build(model); } catch (e) { lastErr = e; delete cache[model]; }
+  }
+  throw lastErr;
+}
+function build(model) {
   return (cache[model] ||= pipeline("automatic-speech-recognition", "Xenova/whisper-" + model, {
     device: "wasm", dtype: "q8", progress_callback: (p) => { if (p.file) lastFile = p.file; post({ type: "download", p }); },
   }));

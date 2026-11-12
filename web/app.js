@@ -85,7 +85,7 @@ function newWorker() {
     else if (m.type === "result") finish(m.chunks);
     else if (m.type === "error") fail(m.message);
   };
-  worker.onerror = (e) => fail(e.message || "worker error");
+  worker.onerror = (e) => fail("Gagal memuat library dari cdn.jsdelivr.net (" + (e.message || "worker error") + ")");
 }
 
 function busy(b) {

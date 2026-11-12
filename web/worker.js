@@ -14,7 +14,9 @@ self.onmessage = async (e) => {
   const { audio, model, language, duration } = e.data;
   try {
     post({ type: "status", key: "loading" });
-    const tr = await getPipe(model);
+    let tr;
+    try { tr = await getPipe(model); }
+    catch (err) { throw new Error("Gagal mengunduh model dari huggingface.co / cdn.jsdelivr.net (" + (err && err.message ? err.message : err) + ")"); }
     post({ type: "status", key: "transcribing" });
     const total = Math.max(1, Math.ceil(duration / 20));
     let done = 0;

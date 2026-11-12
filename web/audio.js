@@ -16,7 +16,7 @@ function viaFfmpeg(arr, ext) {
     const w = new Worker("ffdecode.js");
     w.onmessage = (e) => {
       w.terminate();
-      e.data.ok ? resolve({ audio: e.data.audio, duration: e.data.audio.length / 16000 }) : reject(new Error(e.data.error));
+      e.data.ok ? resolve({ audio: e.data.audio, duration: e.data.audio.length / 16000 }) : reject(new Error("Gagal mengonversi audio / mengunduh konverter dari unpkg.com (" + e.data.error + ")"));
     };
     w.onerror = (e) => { w.terminate(); reject(new Error(e.message || "ffmpeg worker error")); };
     w.postMessage({ data: arr, ext, base: FFMPEG_BASE() }, [arr]);

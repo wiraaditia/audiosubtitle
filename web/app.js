@@ -5,27 +5,26 @@ const T = {
   id: {
     title: "WAV → SRT", ui: "Tampilan",
     sub: "Ubah audio jadi subtitle .srt langsung di browser. Audio tidak diunggah ke server mana pun.",
-    drop: "Klik atau seret file audio ke sini (WAV, MP3, M4A, FLAC)", lang: "Bahasa audio", auto: "Otomatis",
-    model: "Model", chars: "Maks karakter/baris", gpu: "Pakai WebGPU (eksperimental, lebih cepat jika didukung)",
+    drop: "Klik atau seret file audio ke sini (WAV, MP3, M4A, FLAC)", lang: "Bahasa audio", auto: "Otomatis", chars: "Maks karakter/baris",
     start: "Mulai", cancel: "Batal", result: "Hasil SRT", download: "Unduh .srt", copy: "Salin",
-    note: "Model diunduh sekali saat pertama dipakai lalu disimpan di browser; setelah itu bisa dipakai tanpa internet. Proses berjalan di perangkatmu, jadi audio panjang bisa memakan waktu dan memori.",
+    note: "Model (~250 MB) diunduh sekali saat pertama dipakai lalu disimpan di browser; setelah itu bisa dipakai tanpa internet. Proses berjalan di perangkatmu, jadi audio panjang bisa memakan waktu dan memori.",
     s_decode: "Membaca audio…", s_loading: "Memuat model…", s_dl: "Mengunduh model", s_tr: "Transkripsi…",
-    s_done: "Selesai.", s_gpuFail: "WebGPU gagal, memakai CPU (WASM)…", s_copied: "Tersalin.",
+    s_done: "Selesai.", s_copied: "Tersalin.",
     s_err: "Gagal: ", s_cancel: "Dibatalkan.", s_big: "File besar; bisa lambat atau kehabisan memori.",
   },
   en: {
     title: "WAV → SRT", ui: "Interface",
     sub: "Turn audio into .srt subtitles right in your browser. Your audio is never uploaded to any server.",
-    drop: "Click or drop an audio file here (WAV, MP3, M4A, FLAC)", lang: "Audio language", auto: "Auto-detect",
-    model: "Model", chars: "Max chars/line", gpu: "Use WebGPU (experimental, faster if supported)",
+    drop: "Click or drop an audio file here (WAV, MP3, M4A, FLAC)", lang: "Audio language", auto: "Auto-detect", chars: "Max chars/line",
     start: "Start", cancel: "Cancel", result: "SRT result", download: "Download .srt", copy: "Copy",
-    note: "The model downloads once on first use and is stored in your browser; afterwards it works without internet. Processing runs on your device, so long audio may take time and memory.",
+    note: "The model (~250 MB) downloads once on first use and is stored in your browser; afterwards it works without internet. Processing runs on your device, so long audio may take time and memory.",
     s_decode: "Reading audio…", s_loading: "Loading model…", s_dl: "Downloading model", s_tr: "Transcribing…",
-    s_done: "Done.", s_gpuFail: "WebGPU failed, using CPU (WASM)…", s_copied: "Copied.",
+    s_done: "Done.", s_copied: "Copied.",
     s_err: "Failed: ", s_cancel: "Cancelled.", s_big: "Large file; may be slow or run out of memory.",
   },
 };
 
+const MODEL = "small"; // model standar (~250 MB, sekali unduh)
 const $ = (id) => document.getElementById(id);
 let ui = localStorage.getItem("ui") || ((navigator.language || "id").slice(0, 2) === "en" ? "en" : "id");
 let file = null, worker = null, fileName = "audio", duration = 0, statusKey = null, lastStatus = "";
@@ -46,8 +45,6 @@ function setStatus(key, cls = "", extra = "") {
 }
 function setBar(v) { $("bar").style.width = Math.round(v * 100) + "%"; }
 $("ui").onchange = (e) => { ui = e.target.value; localStorage.setItem("ui", ui); applyUi(); };
-
-if (!("gpu" in navigator)) $("gpuRow").classList.add("hidden");
 
 // ---- file pick
 const drop = $("drop");
@@ -135,8 +132,8 @@ $("go").onclick = async () => {
     duration = d.duration;
     newWorker();
     worker.postMessage({
-      audio: d.audio, duration: d.duration, model: $("model").value,
-      language: $("lang").value || null, gpu: $("gpu").checked && !$("gpuRow").classList.contains("hidden"),
+      audio: d.audio, duration: d.duration, model: MODEL,
+      language: $("lang").value || null,
     }, [d.audio.buffer]);
   } catch (err) { fail(err.message || String(err)); }
 };

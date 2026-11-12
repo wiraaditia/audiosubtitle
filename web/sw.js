@@ -1,5 +1,5 @@
 // Cache shell + library CDN supaya halaman bisa dibuka lagi tanpa internet (model dicache oleh transformers.js).
-const C = "wav2srt-v2";
+const C = "wav2srt-v3";
 const SHELL = ["./", "index.html", "app.js", "srt.js", "wav.js", "worker.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(C).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(self.clients.claim()); });

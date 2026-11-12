@@ -1,4 +1,5 @@
 import { chunksToCues, cuesToSrt } from "./srt.js";
+import { parseWav } from "./wav.js";
 
 const T = {
   id: {
@@ -66,16 +67,26 @@ function pick(f) {
 }
 
 // ---- audio -> Float32 mono 16 kHz
-async function decode(f) {
-  const arr = await f.arrayBuffer();
-  const ac = new (window.AudioContext || window.webkitAudioContext)();
-  const buf = await ac.decodeAudioData(arr);
-  ac.close();
+async function resample16k(buf) {
   const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16000)), 16000);
   const src = off.createBufferSource();
   src.buffer = buf; src.connect(off.destination); src.start();
   const r = await off.startRendering();
   return { audio: r.getChannelData(0), duration: buf.duration };
+}
+async function decode(f) {
+  const arr = await f.arrayBuffer();
+  const w = parseWav(arr);
+  if (w && w.samples.length) {           // WAV: dibaca sendiri (lebih andal dari decodeAudioData)
+    if (w.sampleRate === 16000) return { audio: w.samples, duration: w.samples.length / 16000 };
+    const ab = new AudioBuffer({ length: w.samples.length, sampleRate: w.sampleRate, numberOfChannels: 1 });
+    ab.copyToChannel(w.samples, 0);
+    return resample16k(ab);
+  }
+  const ac = new (window.AudioContext || window.webkitAudioContext)();   // mp3/m4a/flac/dll
+  const buf = await ac.decodeAudioData(arr);
+  ac.close();
+  return resample16k(buf);
 }
 
 // ---- worker

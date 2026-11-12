@@ -1,0 +1,6 @@
+models/
+build/
+dist/
+__pycache__/
+*.spec
+*.srt

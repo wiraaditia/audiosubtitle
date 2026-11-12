@@ -1,24 +1,24 @@
 import { chunksToCues, cuesToSrt } from "./srt.js";
-import { parseWav } from "./wav.js";
+import { decodeFile } from "./audio.js";
 
 const T = {
   id: {
     title: "WAV → SRT", ui: "Tampilan",
     sub: "Ubah audio jadi subtitle .srt langsung di browser. Audio tidak diunggah ke server mana pun.",
-    drop: "Klik atau seret file audio ke sini (WAV, MP3, M4A, FLAC)", lang: "Bahasa audio", auto: "Otomatis", chars: "Maks karakter/baris",
+    drop: "Klik atau seret file audio ke sini (WAV, MP3, M4A, AMR, FLAC)", lang: "Bahasa audio", auto: "Otomatis", chars: "Maks karakter/baris",
     start: "Mulai", cancel: "Batal", result: "Hasil SRT", download: "Unduh .srt", copy: "Salin",
     note: "Model (~250 MB) diunduh sekali saat pertama dipakai lalu disimpan di browser; setelah itu bisa dipakai tanpa internet. Proses berjalan di perangkatmu, jadi audio panjang bisa memakan waktu dan memori.",
-    s_decode: "Membaca audio…", s_loading: "Memuat model…", s_dl: "Mengunduh model", s_tr: "Transkripsi…",
+    s_decode: "Membaca audio…", s_conv: "Mengonversi format audio (unduh ~30 MB, sekali saja)…", s_loading: "Memuat model…", s_dl: "Mengunduh model", s_tr: "Transkripsi…",
     s_done: "Selesai.", s_copied: "Tersalin.",
     s_err: "Gagal: ", s_cancel: "Dibatalkan.", s_big: "File besar; bisa lambat atau kehabisan memori.",
   },
   en: {
     title: "WAV → SRT", ui: "Interface",
     sub: "Turn audio into .srt subtitles right in your browser. Your audio is never uploaded to any server.",
-    drop: "Click or drop an audio file here (WAV, MP3, M4A, FLAC)", lang: "Audio language", auto: "Auto-detect", chars: "Max chars/line",
+    drop: "Click or drop an audio file here (WAV, MP3, M4A, AMR, FLAC)", lang: "Audio language", auto: "Auto-detect", chars: "Max chars/line",
     start: "Start", cancel: "Cancel", result: "SRT result", download: "Download .srt", copy: "Copy",
     note: "The model (~250 MB) downloads once on first use and is stored in your browser; afterwards it works without internet. Processing runs on your device, so long audio may take time and memory.",
-    s_decode: "Reading audio…", s_loading: "Loading model…", s_dl: "Downloading model", s_tr: "Transcribing…",
+    s_decode: "Reading audio…", s_conv: "Converting audio format (one-time ~30 MB download)…", s_loading: "Loading model…", s_dl: "Downloading model", s_tr: "Transcribing…",
     s_done: "Done.", s_copied: "Copied.",
     s_err: "Failed: ", s_cancel: "Cancelled.", s_big: "Large file; may be slow or run out of memory.",
   },
@@ -64,28 +64,6 @@ function pick(f) {
 }
 
 // ---- audio -> Float32 mono 16 kHz
-async function resample16k(buf) {
-  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16000)), 16000);
-  const src = off.createBufferSource();
-  src.buffer = buf; src.connect(off.destination); src.start();
-  const r = await off.startRendering();
-  return { audio: r.getChannelData(0), duration: buf.duration };
-}
-async function decode(f) {
-  const arr = await f.arrayBuffer();
-  const w = parseWav(arr);
-  if (w && w.samples.length) {           // WAV: dibaca sendiri (lebih andal dari decodeAudioData)
-    if (w.sampleRate === 16000) return { audio: w.samples, duration: w.samples.length / 16000 };
-    const ab = new AudioBuffer({ length: w.samples.length, sampleRate: w.sampleRate, numberOfChannels: 1 });
-    ab.copyToChannel(w.samples, 0);
-    return resample16k(ab);
-  }
-  const ac = new (window.AudioContext || window.webkitAudioContext)();   // mp3/m4a/flac/dll
-  const buf = await ac.decodeAudioData(arr);
-  ac.close();
-  return resample16k(buf);
-}
-
 // ---- worker
 function newWorker() {
   if (worker) worker.terminate();
@@ -128,7 +106,7 @@ $("go").onclick = async () => {
   busy(true); setBar(0); $("out").classList.add("hidden");
   try {
     setStatus("decode");
-    const d = await decode(file);
+    const d = await decodeFile(file, () => setStatus("conv"));
     duration = d.duration;
     newWorker();
     worker.postMessage({

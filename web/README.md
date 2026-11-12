@@ -16,6 +16,9 @@ python -m http.server 8000
 ```
 lalu buka http://localhost:8000
 
+## Format audio
+WAV dibaca langsung. MP3/M4A/FLAC/OGG memakai decoder browser. AMR, AWB, 3GP, WMA, OPUS dikonversi lewat ffmpeg.wasm (~32 MB dari unpkg.com, diunduh sekali lalu dicache).
+
 ## Catatan
 - Model dari Hugging Face (`Xenova/whisper-tiny|base|small`) diunduh sekali lalu dicache browser.
 - Library dimuat dari cdn.jsdelivr.net. Untuk fully self-hosted, salin paket `@huggingface/transformers` dan file wasm onnxruntime ke situsmu.

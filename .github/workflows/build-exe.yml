@@ -9,7 +9,7 @@ jobs:
         with: { python-version: "3.11" }
       - run: python -m pip install -r requirements.txt pyinstaller
       - run: python wav2srt.py --download small
-      - run: pyinstaller --noconfirm --windowed --name wav2srt --collect-all faster_whisper --collect-all ctranslate2 wav2srt.py
+      - run: pyinstaller --noconfirm --windowed --name wav2srt --collect-all faster_whisper --collect-all ctranslate2 --collect-all av wav2srt.py
       - run: xcopy /E /I /Y models dist\wav2srt\models
       - uses: actions/upload-artifact@v4
         with: { name: wav2srt-windows, path: dist/wav2srt }

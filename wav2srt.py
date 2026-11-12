@@ -110,10 +110,30 @@ def download_model(name: str, log=print):
     log("Selesai. Mulai sekarang bisa dipakai offline.")
 
 
+def decode_with_av(path):
+    """Format non-WAV (amr, mp3, m4a, ogg, flac, ...) -> float32 mono 16 kHz lewat PyAV langsung.
+    (faster_whisper.decode_audio rusak di PyAV 19, jadi dibuat sendiri.)"""
+    import av
+    import numpy as np
+    rs = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    parts = []
+    with av.open(str(path)) as c:
+        if not c.streams.audio:
+            raise RuntimeError("File tidak berisi audio.")
+        for frame in c.decode(audio=0):
+            for o in rs.resample(frame):
+                parts.append(o.to_ndarray().reshape(-1))
+        for o in rs.resample(None):
+            parts.append(o.to_ndarray().reshape(-1))
+    if not parts:
+        raise RuntimeError("Audio kosong / tidak bisa dibaca.")
+    return np.concatenate(parts).astype(np.float32) / 32768.0
+
+
 def load_audio(path):
     """WAV dibaca langsung (tanpa PyAV) -> float32 mono 16 kHz. Format lain: kembalikan path."""
     if not str(path).lower().endswith(".wav"):
-        return path
+        return decode_with_av(path)
     try:
         import wave
         import numpy as np
@@ -132,7 +152,7 @@ def load_audio(path):
         elif sw == 4:
             x = np.frombuffer(raw, "<i4").astype(np.float32) / 2147483648
         else:
-            return path
+            return decode_with_av(path)
         if ch > 1:
             x = x[: len(x) // ch * ch].reshape(-1, ch).mean(axis=1)
         if sr != 16000:
@@ -144,7 +164,7 @@ def load_audio(path):
             x = np.interp(np.linspace(0, len(x) - 1, m), np.arange(len(x)), x)
         return np.ascontiguousarray(x, dtype=np.float32)
     except Exception:  # noqa: BLE001
-        return path
+        return decode_with_av(path)
 
 
 def transcribe(audio, model_name="small", language=None, max_chars=42,
@@ -156,7 +176,7 @@ def transcribe(audio, model_name="small", language=None, max_chars=42,
         raise RuntimeError(
             f"Model '{model_name}' belum ada di {MODELS_DIR}.\n"
             f"Jalankan sekali (online): python wav2srt.py --download {model_name}")
-    log(f"Memuat model: {path} [CPU int8, build 3]")
+    log(f"Memuat model: {path} [CPU int8, build 4]")
     model = WhisperModel(path, device="cpu", compute_type="int8", local_files_only=True)
 
     log("Transkripsi dimulai ...")
@@ -279,7 +299,7 @@ def run_gui():
 
     def pick_file():
         p = filedialog.askopenfilename(
-            filetypes=[("Audio", "*.wav *.mp3 *.m4a *.flac *.ogg *.mp4"), ("*", "*.*")])
+            filetypes=[("Audio", "*.wav *.mp3 *.m4a *.amr *.awb *.aac *.flac *.ogg *.opus *.wma *.3gp"), ("*", "*.*")])
         if p:
             v_file.set(p)
             v_out.set(str(Path(p).with_suffix(".srt")))
